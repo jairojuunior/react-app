@@ -43,7 +43,7 @@ jobs:
       - name: Print branch
         run: echo ${{ github.ref }}
       - name: Create a Release
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
         run: npx semantic-release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
