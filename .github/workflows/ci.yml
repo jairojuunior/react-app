@@ -26,5 +26,5 @@ jobs:
         if: github.event_name == 'push'
         run: npx surge --project ./build --domain oval-letters.surge.sh
         env:
-          SURGE_LOGIN: $ {{ secrets.SURGE_LOGIN }}
-          SURGE_TOKEN: $ {{ secrets.SURGE_TOKEN }}
+          SURGE_LOGIN: ${{ secrets.SURGE_LOGIN }}
+          SURGE_TOKEN: ${{ secrets.SURGE_TOKEN }}
