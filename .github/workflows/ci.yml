@@ -40,6 +40,8 @@ jobs:
         with:
           name: build
           path: build
+      - name: Print branch
+        run: echo ${{ github.ref }}
       - name: Create a Release
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: npx semantic-release
