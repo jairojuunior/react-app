@@ -16,4 +16,4 @@ echo 'some stuff'
 echo 'some stuff'
 echo "::endgroup::"
 
-echo "::set-env name=VARIABLE_NAME::value"
+echo echo "{VARIABLE_NAME}={value}" >> $GITHUB_ENV
