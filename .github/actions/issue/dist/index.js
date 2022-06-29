@@ -45,7 +45,7 @@ module.exports = /******/ (function (modules, runtime) {
   /******/ // the startup function
   /******/ function startup() {
     /******/ // Load entry module and return exports
-    /******/ return __webpack_require__(239);
+    /******/ return __webpack_require__(482);
     /******/
   }
   /******/
@@ -899,38 +899,6 @@ module.exports = /******/ (function (modules, runtime) {
 
     /***/ 213: /***/ function (module) {
       module.exports = require("punycode");
-
-      /***/
-    },
-
-    /***/ 239: /***/ function (__unusedmodule, __unusedexports, __webpack_require__) {
-      //npm install -D @zeit/ncc
-      //npx ncc build .github/actions/hello/index.js -o .github/actions/hello/dist
-      const core = __webpack_require__(470);
-      const github = __webpack_require__(469);
-
-      try {
-        //throw( new Error("some error message"));
-        const name = core.getInput("who-to-greet");
-
-        console.log(`Hello ${name}`);
-
-        const time = new Date();
-        core.setOutput("time", time.toTimeString());
-
-        console.log(JSON.stringify(github, null, "\t"));
-
-        //Allows to export a variable to another step
-        core.exportVariable("VARIABLE_NAME", "value");
-
-        //These logs will not make the action fail
-        //but will appear in the log if enabled
-        core.debug("Debug message");
-        core.warning("Debug message");
-        core.error("Debug message");
-      } catch (error) {
-        core.setFailed(error.message);
-      }
 
       /***/
     },
@@ -5627,7 +5595,427 @@ module.exports = /******/ (function (modules, runtime) {
       /***/
     },
 
-    /***/ 482: /***/ function (module) {
+    /***/ 482: /***/ function (__unusedmodule, __unusedexports, __webpack_require__) {
+      const core = __webpack_require__(470);
+      const github = __webpack_require__(469);
+
+      try {
+        const token = core.getInput("token");
+        const title = core.getInput("title");
+        const body = core.getInput("body");
+        const assignees = core.getInput("assignees");
+
+        const octokit = new github.GitHub(token);
+        const response = octokit.issues.create({
+          owner: github.context.repo.owner,
+          repo: github.context.repo.repo,
+          title: title,
+          body: body,
+          assignees: assignees ? assignees.split("\n") : undefined
+        });
+
+        core.setOutput("issue", JSON.stringify(response.data));
+      } catch (error) {
+        code.setFailed(error.message);
+      }
+
+      /***/
+    },
+
+    /***/ 510: /***/ function (module) {
+      module.exports = addHook;
+
+      function addHook(state, kind, name, hook) {
+        var orig = hook;
+        if (!state.registry[name]) {
+          state.registry[name] = [];
+        }
+
+        if (kind === "before") {
+          hook = function (method, options) {
+            return Promise.resolve()
+              .then(orig.bind(null, options))
+              .then(method.bind(null, options));
+          };
+        }
+
+        if (kind === "after") {
+          hook = function (method, options) {
+            var result;
+            return Promise.resolve()
+              .then(method.bind(null, options))
+              .then(function (result_) {
+                result = result_;
+                return orig(result, options);
+              })
+              .then(function () {
+                return result;
+              });
+          };
+        }
+
+        if (kind === "error") {
+          hook = function (method, options) {
+            return Promise.resolve()
+              .then(method.bind(null, options))
+              .catch(function (error) {
+                return orig(error, options);
+              });
+          };
+        }
+
+        state.registry[name].push({
+          hook: hook,
+          orig: orig
+        });
+      }
+
+      /***/
+    },
+
+    /***/ 521: /***/ function (__unusedmodule, exports, __webpack_require__) {
+      "use strict";
+
+      var __createBinding =
+        (this && this.__createBinding) ||
+        (Object.create
+          ? function (o, m, k, k2) {
+              if (k2 === undefined) k2 = k;
+              Object.defineProperty(o, k2, {
+                enumerable: true,
+                get: function () {
+                  return m[k];
+                }
+              });
+            }
+          : function (o, m, k, k2) {
+              if (k2 === undefined) k2 = k;
+              o[k2] = m[k];
+            });
+      var __setModuleDefault =
+        (this && this.__setModuleDefault) ||
+        (Object.create
+          ? function (o, v) {
+              Object.defineProperty(o, "default", { enumerable: true, value: v });
+            }
+          : function (o, v) {
+              o["default"] = v;
+            });
+      var __importStar =
+        (this && this.__importStar) ||
+        function (mod) {
+          if (mod && mod.__esModule) return mod;
+          var result = {};
+          if (mod != null)
+            for (var k in mod)
+              if (k !== "default" && Object.hasOwnProperty.call(mod, k))
+                __createBinding(result, mod, k);
+          __setModuleDefault(result, mod);
+          return result;
+        };
+      Object.defineProperty(exports, "__esModule", { value: true });
+      exports.getOctokitOptions = exports.GitHub = exports.context = void 0;
+      const Context = __importStar(__webpack_require__(262));
+      const Utils = __importStar(__webpack_require__(127));
+      // octokit + plugins
+      const core_1 = __webpack_require__(448);
+      const plugin_rest_endpoint_methods_1 = __webpack_require__(842);
+      const plugin_paginate_rest_1 = __webpack_require__(299);
+      exports.context = new Context.Context();
+      const baseUrl = Utils.getApiBaseUrl();
+      const defaults = {
+        baseUrl,
+        request: {
+          agent: Utils.getProxyAgent(baseUrl)
+        }
+      };
+      exports.GitHub = core_1.Octokit.plugin(
+        plugin_rest_endpoint_methods_1.restEndpointMethods,
+        plugin_paginate_rest_1.paginateRest
+      ).defaults(defaults);
+      /**
+       * Convience function to correctly format Octokit Options to pass into the constructor.
+       *
+       * @param     token    the repo PAT or GITHUB_TOKEN
+       * @param     options  other options to set
+       */
+      function getOctokitOptions(token, options) {
+        const opts = Object.assign({}, options || {}); // Shallow clone - don't mutate the object provided by the caller
+        // Auth
+        const auth = Utils.getAuthString(token, opts);
+        if (auth) {
+          opts.auth = auth;
+        }
+        return opts;
+      }
+      exports.getOctokitOptions = getOctokitOptions;
+      //# sourceMappingURL=utils.js.map
+
+      /***/
+    },
+
+    /***/ 523: /***/ function (module, __unusedexports, __webpack_require__) {
+      var register = __webpack_require__(280);
+      var addHook = __webpack_require__(510);
+      var removeHook = __webpack_require__(866);
+
+      // bind with array of arguments: https://stackoverflow.com/a/21792913
+      var bind = Function.bind;
+      var bindable = bind.bind(bind);
+
+      function bindApi(hook, state, name) {
+        var removeHookRef = bindable(removeHook, null).apply(null, name ? [state, name] : [state]);
+        hook.api = { remove: removeHookRef };
+        hook.remove = removeHookRef;
+        ["before", "error", "after", "wrap"].forEach(function (kind) {
+          var args = name ? [state, kind, name] : [state, kind];
+          hook[kind] = hook.api[kind] = bindable(addHook, null).apply(null, args);
+        });
+      }
+
+      function HookSingular() {
+        var singularHookName = "h";
+        var singularHookState = {
+          registry: {}
+        };
+        var singularHook = register.bind(null, singularHookState, singularHookName);
+        bindApi(singularHook, singularHookState, singularHookName);
+        return singularHook;
+      }
+
+      function HookCollection() {
+        var state = {
+          registry: {}
+        };
+
+        var hook = register.bind(null, state);
+        bindApi(hook, state);
+
+        return hook;
+      }
+
+      var collectionHookDeprecationMessageDisplayed = false;
+      function Hook() {
+        if (!collectionHookDeprecationMessageDisplayed) {
+          console.warn(
+            '[before-after-hook]: "Hook()" repurposing warning, use "Hook.Collection()". Read more: https://git.io/upgrade-before-after-hook-to-1.4'
+          );
+          collectionHookDeprecationMessageDisplayed = true;
+        }
+        return HookCollection();
+      }
+
+      Hook.Singular = HookSingular.bind();
+      Hook.Collection = HookCollection.bind();
+
+      module.exports = Hook;
+      // expose constructors as a named property for TypeScript
+      module.exports.Hook = Hook;
+      module.exports.Singular = Hook.Singular;
+      module.exports.Collection = Hook.Collection;
+
+      /***/
+    },
+
+    /***/ 554: /***/ function (__unusedmodule, exports) {
+      "use strict";
+
+      var __awaiter =
+        (this && this.__awaiter) ||
+        function (thisArg, _arguments, P, generator) {
+          function adopt(value) {
+            return value instanceof P
+              ? value
+              : new P(function (resolve) {
+                  resolve(value);
+                });
+          }
+          return new (P || (P = Promise))(function (resolve, reject) {
+            function fulfilled(value) {
+              try {
+                step(generator.next(value));
+              } catch (e) {
+                reject(e);
+              }
+            }
+            function rejected(value) {
+              try {
+                step(generator["throw"](value));
+              } catch (e) {
+                reject(e);
+              }
+            }
+            function step(result) {
+              result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected);
+            }
+            step((generator = generator.apply(thisArg, _arguments || [])).next());
+          });
+        };
+      Object.defineProperty(exports, "__esModule", { value: true });
+      exports.PersonalAccessTokenCredentialHandler =
+        exports.BearerCredentialHandler =
+        exports.BasicCredentialHandler =
+          void 0;
+      class BasicCredentialHandler {
+        constructor(username, password) {
+          this.username = username;
+          this.password = password;
+        }
+        prepareRequest(options) {
+          if (!options.headers) {
+            throw Error("The request has no headers");
+          }
+          options.headers["Authorization"] = `Basic ${Buffer.from(
+            `${this.username}:${this.password}`
+          ).toString("base64")}`;
+        }
+        // This handler cannot handle 401
+        canHandleAuthentication() {
+          return false;
+        }
+        handleAuthentication() {
+          return __awaiter(this, void 0, void 0, function* () {
+            throw new Error("not implemented");
+          });
+        }
+      }
+      exports.BasicCredentialHandler = BasicCredentialHandler;
+      class BearerCredentialHandler {
+        constructor(token) {
+          this.token = token;
+        }
+        // currently implements pre-authorization
+        // TODO: support preAuth = false where it hooks on 401
+        prepareRequest(options) {
+          if (!options.headers) {
+            throw Error("The request has no headers");
+          }
+          options.headers["Authorization"] = `Bearer ${this.token}`;
+        }
+        // This handler cannot handle 401
+        canHandleAuthentication() {
+          return false;
+        }
+        handleAuthentication() {
+          return __awaiter(this, void 0, void 0, function* () {
+            throw new Error("not implemented");
+          });
+        }
+      }
+      exports.BearerCredentialHandler = BearerCredentialHandler;
+      class PersonalAccessTokenCredentialHandler {
+        constructor(token) {
+          this.token = token;
+        }
+        // currently implements pre-authorization
+        // TODO: support preAuth = false where it hooks on 401
+        prepareRequest(options) {
+          if (!options.headers) {
+            throw Error("The request has no headers");
+          }
+          options.headers["Authorization"] = `Basic ${Buffer.from(`PAT:${this.token}`).toString(
+            "base64"
+          )}`;
+        }
+        // This handler cannot handle 401
+        canHandleAuthentication() {
+          return false;
+        }
+        handleAuthentication() {
+          return __awaiter(this, void 0, void 0, function* () {
+            throw new Error("not implemented");
+          });
+        }
+      }
+      exports.PersonalAccessTokenCredentialHandler = PersonalAccessTokenCredentialHandler;
+      //# sourceMappingURL=auth.js.map
+
+      /***/
+    },
+
+    /***/ 573: /***/ function (__unusedmodule, exports, __webpack_require__) {
+      "use strict";
+
+      var __createBinding =
+        (this && this.__createBinding) ||
+        (Object.create
+          ? function (o, m, k, k2) {
+              if (k2 === undefined) k2 = k;
+              Object.defineProperty(o, k2, {
+                enumerable: true,
+                get: function () {
+                  return m[k];
+                }
+              });
+            }
+          : function (o, m, k, k2) {
+              if (k2 === undefined) k2 = k;
+              o[k2] = m[k];
+            });
+      var __setModuleDefault =
+        (this && this.__setModuleDefault) ||
+        (Object.create
+          ? function (o, v) {
+              Object.defineProperty(o, "default", { enumerable: true, value: v });
+            }
+          : function (o, v) {
+              o["default"] = v;
+            });
+      var __importStar =
+        (this && this.__importStar) ||
+        function (mod) {
+          if (mod && mod.__esModule) return mod;
+          var result = {};
+          if (mod != null)
+            for (var k in mod)
+              if (k !== "default" && Object.hasOwnProperty.call(mod, k))
+                __createBinding(result, mod, k);
+          __setModuleDefault(result, mod);
+          return result;
+        };
+      Object.defineProperty(exports, "__esModule", { value: true });
+      exports.toPlatformPath = exports.toWin32Path = exports.toPosixPath = void 0;
+      const path = __importStar(__webpack_require__(622));
+      /**
+       * toPosixPath converts the given path to the posix form. On Windows, \\ will be
+       * replaced with /.
+       *
+       * @param pth. Path to transform.
+       * @return string Posix path.
+       */
+      function toPosixPath(pth) {
+        return pth.replace(/[\\]/g, "/");
+      }
+      exports.toPosixPath = toPosixPath;
+      /**
+       * toWin32Path converts the given path to the win32 form. On Linux, / will be
+       * replaced with \\.
+       *
+       * @param pth. Path to transform.
+       * @return string Win32 path.
+       */
+      function toWin32Path(pth) {
+        return pth.replace(/[/]/g, "\\");
+      }
+      exports.toWin32Path = toWin32Path;
+      /**
+       * toPlatformPath converts the given path to a platform-specific path. It does
+       * this by replacing instances of / and \ with the platform-specific path
+       * separator.
+       *
+       * @param pth The path to platformize.
+       * @return string The platform-specific path.
+       */
+      function toPlatformPath(pth) {
+        return pth.replace(/[/\\]/g, path.sep);
+      }
+      exports.toPlatformPath = toPlatformPath;
+      //# sourceMappingURL=path-utils.js.map
+
+      /***/
+    },
+
+    /***/ 579: /***/ function (module) {
       module.exports = [
         [[0, 44], "disallowed_STD3_valid"],
         [[45, 46], "valid"],
@@ -13820,399 +14208,6 @@ module.exports = /******/ (function (modules, runtime) {
       /***/
     },
 
-    /***/ 510: /***/ function (module) {
-      module.exports = addHook;
-
-      function addHook(state, kind, name, hook) {
-        var orig = hook;
-        if (!state.registry[name]) {
-          state.registry[name] = [];
-        }
-
-        if (kind === "before") {
-          hook = function (method, options) {
-            return Promise.resolve()
-              .then(orig.bind(null, options))
-              .then(method.bind(null, options));
-          };
-        }
-
-        if (kind === "after") {
-          hook = function (method, options) {
-            var result;
-            return Promise.resolve()
-              .then(method.bind(null, options))
-              .then(function (result_) {
-                result = result_;
-                return orig(result, options);
-              })
-              .then(function () {
-                return result;
-              });
-          };
-        }
-
-        if (kind === "error") {
-          hook = function (method, options) {
-            return Promise.resolve()
-              .then(method.bind(null, options))
-              .catch(function (error) {
-                return orig(error, options);
-              });
-          };
-        }
-
-        state.registry[name].push({
-          hook: hook,
-          orig: orig
-        });
-      }
-
-      /***/
-    },
-
-    /***/ 521: /***/ function (__unusedmodule, exports, __webpack_require__) {
-      "use strict";
-
-      var __createBinding =
-        (this && this.__createBinding) ||
-        (Object.create
-          ? function (o, m, k, k2) {
-              if (k2 === undefined) k2 = k;
-              Object.defineProperty(o, k2, {
-                enumerable: true,
-                get: function () {
-                  return m[k];
-                }
-              });
-            }
-          : function (o, m, k, k2) {
-              if (k2 === undefined) k2 = k;
-              o[k2] = m[k];
-            });
-      var __setModuleDefault =
-        (this && this.__setModuleDefault) ||
-        (Object.create
-          ? function (o, v) {
-              Object.defineProperty(o, "default", { enumerable: true, value: v });
-            }
-          : function (o, v) {
-              o["default"] = v;
-            });
-      var __importStar =
-        (this && this.__importStar) ||
-        function (mod) {
-          if (mod && mod.__esModule) return mod;
-          var result = {};
-          if (mod != null)
-            for (var k in mod)
-              if (k !== "default" && Object.hasOwnProperty.call(mod, k))
-                __createBinding(result, mod, k);
-          __setModuleDefault(result, mod);
-          return result;
-        };
-      Object.defineProperty(exports, "__esModule", { value: true });
-      exports.getOctokitOptions = exports.GitHub = exports.context = void 0;
-      const Context = __importStar(__webpack_require__(262));
-      const Utils = __importStar(__webpack_require__(127));
-      // octokit + plugins
-      const core_1 = __webpack_require__(448);
-      const plugin_rest_endpoint_methods_1 = __webpack_require__(842);
-      const plugin_paginate_rest_1 = __webpack_require__(299);
-      exports.context = new Context.Context();
-      const baseUrl = Utils.getApiBaseUrl();
-      const defaults = {
-        baseUrl,
-        request: {
-          agent: Utils.getProxyAgent(baseUrl)
-        }
-      };
-      exports.GitHub = core_1.Octokit.plugin(
-        plugin_rest_endpoint_methods_1.restEndpointMethods,
-        plugin_paginate_rest_1.paginateRest
-      ).defaults(defaults);
-      /**
-       * Convience function to correctly format Octokit Options to pass into the constructor.
-       *
-       * @param     token    the repo PAT or GITHUB_TOKEN
-       * @param     options  other options to set
-       */
-      function getOctokitOptions(token, options) {
-        const opts = Object.assign({}, options || {}); // Shallow clone - don't mutate the object provided by the caller
-        // Auth
-        const auth = Utils.getAuthString(token, opts);
-        if (auth) {
-          opts.auth = auth;
-        }
-        return opts;
-      }
-      exports.getOctokitOptions = getOctokitOptions;
-      //# sourceMappingURL=utils.js.map
-
-      /***/
-    },
-
-    /***/ 523: /***/ function (module, __unusedexports, __webpack_require__) {
-      var register = __webpack_require__(280);
-      var addHook = __webpack_require__(510);
-      var removeHook = __webpack_require__(866);
-
-      // bind with array of arguments: https://stackoverflow.com/a/21792913
-      var bind = Function.bind;
-      var bindable = bind.bind(bind);
-
-      function bindApi(hook, state, name) {
-        var removeHookRef = bindable(removeHook, null).apply(null, name ? [state, name] : [state]);
-        hook.api = { remove: removeHookRef };
-        hook.remove = removeHookRef;
-        ["before", "error", "after", "wrap"].forEach(function (kind) {
-          var args = name ? [state, kind, name] : [state, kind];
-          hook[kind] = hook.api[kind] = bindable(addHook, null).apply(null, args);
-        });
-      }
-
-      function HookSingular() {
-        var singularHookName = "h";
-        var singularHookState = {
-          registry: {}
-        };
-        var singularHook = register.bind(null, singularHookState, singularHookName);
-        bindApi(singularHook, singularHookState, singularHookName);
-        return singularHook;
-      }
-
-      function HookCollection() {
-        var state = {
-          registry: {}
-        };
-
-        var hook = register.bind(null, state);
-        bindApi(hook, state);
-
-        return hook;
-      }
-
-      var collectionHookDeprecationMessageDisplayed = false;
-      function Hook() {
-        if (!collectionHookDeprecationMessageDisplayed) {
-          console.warn(
-            '[before-after-hook]: "Hook()" repurposing warning, use "Hook.Collection()". Read more: https://git.io/upgrade-before-after-hook-to-1.4'
-          );
-          collectionHookDeprecationMessageDisplayed = true;
-        }
-        return HookCollection();
-      }
-
-      Hook.Singular = HookSingular.bind();
-      Hook.Collection = HookCollection.bind();
-
-      module.exports = Hook;
-      // expose constructors as a named property for TypeScript
-      module.exports.Hook = Hook;
-      module.exports.Singular = Hook.Singular;
-      module.exports.Collection = Hook.Collection;
-
-      /***/
-    },
-
-    /***/ 554: /***/ function (__unusedmodule, exports) {
-      "use strict";
-
-      var __awaiter =
-        (this && this.__awaiter) ||
-        function (thisArg, _arguments, P, generator) {
-          function adopt(value) {
-            return value instanceof P
-              ? value
-              : new P(function (resolve) {
-                  resolve(value);
-                });
-          }
-          return new (P || (P = Promise))(function (resolve, reject) {
-            function fulfilled(value) {
-              try {
-                step(generator.next(value));
-              } catch (e) {
-                reject(e);
-              }
-            }
-            function rejected(value) {
-              try {
-                step(generator["throw"](value));
-              } catch (e) {
-                reject(e);
-              }
-            }
-            function step(result) {
-              result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected);
-            }
-            step((generator = generator.apply(thisArg, _arguments || [])).next());
-          });
-        };
-      Object.defineProperty(exports, "__esModule", { value: true });
-      exports.PersonalAccessTokenCredentialHandler =
-        exports.BearerCredentialHandler =
-        exports.BasicCredentialHandler =
-          void 0;
-      class BasicCredentialHandler {
-        constructor(username, password) {
-          this.username = username;
-          this.password = password;
-        }
-        prepareRequest(options) {
-          if (!options.headers) {
-            throw Error("The request has no headers");
-          }
-          options.headers["Authorization"] = `Basic ${Buffer.from(
-            `${this.username}:${this.password}`
-          ).toString("base64")}`;
-        }
-        // This handler cannot handle 401
-        canHandleAuthentication() {
-          return false;
-        }
-        handleAuthentication() {
-          return __awaiter(this, void 0, void 0, function* () {
-            throw new Error("not implemented");
-          });
-        }
-      }
-      exports.BasicCredentialHandler = BasicCredentialHandler;
-      class BearerCredentialHandler {
-        constructor(token) {
-          this.token = token;
-        }
-        // currently implements pre-authorization
-        // TODO: support preAuth = false where it hooks on 401
-        prepareRequest(options) {
-          if (!options.headers) {
-            throw Error("The request has no headers");
-          }
-          options.headers["Authorization"] = `Bearer ${this.token}`;
-        }
-        // This handler cannot handle 401
-        canHandleAuthentication() {
-          return false;
-        }
-        handleAuthentication() {
-          return __awaiter(this, void 0, void 0, function* () {
-            throw new Error("not implemented");
-          });
-        }
-      }
-      exports.BearerCredentialHandler = BearerCredentialHandler;
-      class PersonalAccessTokenCredentialHandler {
-        constructor(token) {
-          this.token = token;
-        }
-        // currently implements pre-authorization
-        // TODO: support preAuth = false where it hooks on 401
-        prepareRequest(options) {
-          if (!options.headers) {
-            throw Error("The request has no headers");
-          }
-          options.headers["Authorization"] = `Basic ${Buffer.from(`PAT:${this.token}`).toString(
-            "base64"
-          )}`;
-        }
-        // This handler cannot handle 401
-        canHandleAuthentication() {
-          return false;
-        }
-        handleAuthentication() {
-          return __awaiter(this, void 0, void 0, function* () {
-            throw new Error("not implemented");
-          });
-        }
-      }
-      exports.PersonalAccessTokenCredentialHandler = PersonalAccessTokenCredentialHandler;
-      //# sourceMappingURL=auth.js.map
-
-      /***/
-    },
-
-    /***/ 573: /***/ function (__unusedmodule, exports, __webpack_require__) {
-      "use strict";
-
-      var __createBinding =
-        (this && this.__createBinding) ||
-        (Object.create
-          ? function (o, m, k, k2) {
-              if (k2 === undefined) k2 = k;
-              Object.defineProperty(o, k2, {
-                enumerable: true,
-                get: function () {
-                  return m[k];
-                }
-              });
-            }
-          : function (o, m, k, k2) {
-              if (k2 === undefined) k2 = k;
-              o[k2] = m[k];
-            });
-      var __setModuleDefault =
-        (this && this.__setModuleDefault) ||
-        (Object.create
-          ? function (o, v) {
-              Object.defineProperty(o, "default", { enumerable: true, value: v });
-            }
-          : function (o, v) {
-              o["default"] = v;
-            });
-      var __importStar =
-        (this && this.__importStar) ||
-        function (mod) {
-          if (mod && mod.__esModule) return mod;
-          var result = {};
-          if (mod != null)
-            for (var k in mod)
-              if (k !== "default" && Object.hasOwnProperty.call(mod, k))
-                __createBinding(result, mod, k);
-          __setModuleDefault(result, mod);
-          return result;
-        };
-      Object.defineProperty(exports, "__esModule", { value: true });
-      exports.toPlatformPath = exports.toWin32Path = exports.toPosixPath = void 0;
-      const path = __importStar(__webpack_require__(622));
-      /**
-       * toPosixPath converts the given path to the posix form. On Windows, \\ will be
-       * replaced with /.
-       *
-       * @param pth. Path to transform.
-       * @return string Posix path.
-       */
-      function toPosixPath(pth) {
-        return pth.replace(/[\\]/g, "/");
-      }
-      exports.toPosixPath = toPosixPath;
-      /**
-       * toWin32Path converts the given path to the win32 form. On Linux, / will be
-       * replaced with \\.
-       *
-       * @param pth. Path to transform.
-       * @return string Win32 path.
-       */
-      function toWin32Path(pth) {
-        return pth.replace(/[/]/g, "\\");
-      }
-      exports.toWin32Path = toWin32Path;
-      /**
-       * toPlatformPath converts the given path to a platform-specific path. It does
-       * this by replacing instances of / and \ with the platform-specific path
-       * separator.
-       *
-       * @param pth The path to platformize.
-       * @return string The platform-specific path.
-       */
-      function toPlatformPath(pth) {
-        return pth.replace(/[/\\]/g, path.sep);
-      }
-      exports.toPlatformPath = toPlatformPath;
-      //# sourceMappingURL=path-utils.js.map
-
-      /***/
-    },
-
     /***/ 605: /***/ function (module) {
       module.exports = require("http");
 
@@ -18404,7 +18399,7 @@ module.exports = /******/ (function (modules, runtime) {
       "use strict";
 
       var punycode = __webpack_require__(213);
-      var mappingTable = __webpack_require__(482);
+      var mappingTable = __webpack_require__(579);
 
       var PROCESSING_OPTIONS = {
         TRANSITIONAL: 0,

@@ -3,12 +3,12 @@ author: Jairo
 description: Some description
 inputs:
   who-to-greet:
-    description: 'Who to greet'
+    description: "Who to greet"
     required: true
     default: Jairo
 outputs:
   time:
-    description: 'The greeting time'
+    description: "The greeting time"
 runs:
-  using: 'node12'
+  using: "node12"
   main: "dist/index.js"
