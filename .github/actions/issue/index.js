@@ -18,5 +18,5 @@ try {
 
   core.setOutput("issue", JSON.stringify(response.data));
 } catch (error) {
-  code.setFailed(error.message);
+  core.setFailed(error.message);
 }
