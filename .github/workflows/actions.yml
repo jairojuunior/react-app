@@ -12,7 +12,7 @@ jobs:
           body: Body
           assignees: |
             jairojuunior
-        run: |
+      - run: |
           echo ${{ steps.issue.outputs.issue }}
       - uses: ./.github/actions/hello
         id: hello
