@@ -14,7 +14,7 @@ jobs:
             jairojuunior
       - run: |
           echo ${{ steps.issue.outputs.issue }}
-      - uses: ./.github/actions/hello
+      - uses: ./.github/actions/dist/hello
         with:
           who-to-greet: "World"
       - run: echo "Time ${{ steps.hello.outputs.time }}"
